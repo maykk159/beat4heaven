@@ -1,0 +1,55 @@
+import React, { useState, useEffect } from 'react';
+import { likesAPI } from '../services/api';
+import './LikeButton.css';
+
+const LikeButton = ({ reviewId, initialLikes = 0 }) => {
+    const [likes, setLikes] = useState(initialLikes);
+    const [isLiked, setIsLiked] = useState(false);
+
+    useEffect(() => {
+        // Check if user has already liked this review
+        const checkLikeStatus = async () => {
+            try {
+                const response = await likesAPI.getAll({ review_id: reviewId });
+                setIsLiked(response.data.length > 0);
+            } catch (error) {
+                console.error('Error checking like status:', error);
+            }
+        };
+
+        checkLikeStatus();
+    }, [reviewId]);
+
+    const handleLike = async () => {
+        try {
+            if (!isLiked) {
+                await likesAPI.create({ review: reviewId });
+                setLikes(prev => prev + 1);
+                setIsLiked(true);
+            } else {
+                // Find the like ID and delete it
+                const response = await likesAPI.getAll({ review_id: reviewId });
+                const likeId = response.data[0]?.id;
+                if (likeId) {
+                    await likesAPI.delete(likeId);
+                    setLikes(prev => prev - 1);
+                    setIsLiked(false);
+                }
+            }
+        } catch (error) {
+            console.error('Error toggling like:', error);
+        }
+    };
+
+    return (
+        <button 
+            className={`like-button ${isLiked ? 'liked' : ''}`} 
+            onClick={handleLike}
+        >
+            <span className="like-icon">👍</span>
+            <span className="like-count">{likes}</span>
+        </button>
+    );
+};
+
+export default LikeButton;
